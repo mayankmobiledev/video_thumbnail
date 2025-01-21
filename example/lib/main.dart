@@ -1,12 +1,11 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'dart:io';
-
-import 'package:video_thumbnail/video_thumbnail.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:video_thumbnail/video_thumbnail.dart';
 
 void main() => runApp(MyApp());
 
@@ -21,34 +20,38 @@ class MyApp extends StatelessWidget {
 
 class ThumbnailRequest {
   final String video;
-  final String thumbnailPath;
-  final ImageFormat imageFormat;
+  final String? thumbnailPath;
+  final ImageFormat? imageFormat;
   final int maxHeight;
   final int maxWidth;
   final int timeMs;
   final int quality;
 
   const ThumbnailRequest(
-      {this.video,
-      this.thumbnailPath,
-      this.imageFormat,
-      this.maxHeight,
-      this.maxWidth,
-      this.timeMs,
-      this.quality});
+      {required this.video,
+      required this.thumbnailPath,
+      required this.imageFormat,
+      required this.maxHeight,
+      required this.maxWidth,
+      required this.timeMs,
+      required this.quality});
 }
 
 class ThumbnailResult {
   final Image image;
-  final int dataSize;
+  final int? dataSize;
   final int height;
   final int width;
-  const ThumbnailResult({this.image, this.dataSize, this.height, this.width});
+  const ThumbnailResult(
+      {required this.image,
+      required this.dataSize,
+      required this.height,
+      required this.width});
 }
 
 Future<ThumbnailResult> genThumbnail(ThumbnailRequest r) async {
   //WidgetsFlutterBinding.ensureInitialized();
-  Uint8List bytes;
+  Uint8List? bytes;
   final Completer<ThumbnailResult> completer = Completer();
   if (r.thumbnailPath != null) {
     final thumbnailPath = await VideoThumbnail.thumbnailFile(
@@ -58,7 +61,7 @@ Future<ThumbnailResult> genThumbnail(ThumbnailRequest r) async {
           "USERHEADER2": "user defined header2",
         },
         thumbnailPath: r.thumbnailPath,
-        imageFormat: r.imageFormat,
+        imageFormat: r.imageFormat ?? ImageFormat.JPEG,
         maxHeight: r.maxHeight,
         maxWidth: r.maxWidth,
         timeMs: r.timeMs,
@@ -66,26 +69,26 @@ Future<ThumbnailResult> genThumbnail(ThumbnailRequest r) async {
 
     print("thumbnail file is located: $thumbnailPath");
 
-    final file = File(thumbnailPath);
+    final file = File(thumbnailPath ?? '');
     bytes = file.readAsBytesSync();
   } else {
-    bytes = await VideoThumbnail.thumbnailData(
+    bytes = (await VideoThumbnail.thumbnailData(
         video: r.video,
         headers: {
           "USERHEADER1": "user defined header1",
           "USERHEADER2": "user defined header2",
         },
-        imageFormat: r.imageFormat,
+        imageFormat: r.imageFormat ?? ImageFormat.JPEG,
         maxHeight: r.maxHeight,
         maxWidth: r.maxWidth,
         timeMs: r.timeMs,
-        quality: r.quality);
+        quality: r.quality));
   }
 
-  int _imageDataSize = bytes.length;
+  int? _imageDataSize = bytes?.length;
   print("image size: $_imageDataSize");
 
-  final _image = Image.memory(bytes);
+  final _image = Image.memory(bytes ?? Uint8List(0));
   _image.image
       .resolve(ImageConfiguration())
       .addListener(ImageStreamListener((ImageInfo info, bool _) {
@@ -102,7 +105,7 @@ Future<ThumbnailResult> genThumbnail(ThumbnailRequest r) async {
 class GenThumbnailImage extends StatefulWidget {
   final ThumbnailRequest thumbnailRequest;
 
-  const GenThumbnailImage({Key key, this.thumbnailRequest}) : super(key: key);
+  const GenThumbnailImage({required this.thumbnailRequest});
 
   @override
   _GenThumbnailImageState createState() => _GenThumbnailImageState();
@@ -177,15 +180,15 @@ class _DemoHomeState extends State<DemoHome> {
   final _video = TextEditingController(
       text:
           "https://flutter.github.io/assets-for-api-docs/assets/videos/butterfly.mp4");
-  ImageFormat _format = ImageFormat.JPEG;
+  ImageFormat? _format = ImageFormat.JPEG;
   int _quality = 50;
   int _sizeH = 0;
   int _sizeW = 0;
   int _timeMs = 0;
 
-  GenThumbnailImage _futreImage;
+  GenThumbnailImage? _futreImage;
 
-  String _tempDir;
+  String? _tempDir;
 
   @override
   void initState() {
@@ -349,7 +352,7 @@ class _DemoHomeState extends State<DemoHome> {
                   child: ListView(
                     shrinkWrap: true,
                     children: <Widget>[
-                      (_futreImage != null) ? _futreImage : SizedBox(),
+                      if (_futreImage != null) _futreImage as Widget,
                     ],
                   ),
                 ),
@@ -379,10 +382,10 @@ class _DemoHomeState extends State<DemoHome> {
           children: <Widget>[
             FloatingActionButton(
               onPressed: () async {
-                File video =
-                    await ImagePicker.pickVideo(source: ImageSource.camera);
+                XFile? video =
+                    await ImagePicker().pickVideo(source: ImageSource.camera);
                 setState(() {
-                  _video.text = video.path;
+                  _video.text = video?.path ?? '';
                 });
               },
               child: Icon(Icons.videocam),
@@ -393,10 +396,10 @@ class _DemoHomeState extends State<DemoHome> {
             ),
             FloatingActionButton(
               onPressed: () async {
-                File video =
-                    await ImagePicker.pickVideo(source: ImageSource.gallery);
+                XFile? video =
+                    await ImagePicker().pickVideo(source: ImageSource.gallery);
                 setState(() {
-                  _video.text = video?.path;
+                  _video.text = video?.path ?? '';
                 });
               },
               child: Icon(Icons.local_movies),
@@ -413,7 +416,7 @@ class _DemoHomeState extends State<DemoHome> {
                       thumbnailRequest: ThumbnailRequest(
                           video: _video.text,
                           thumbnailPath: null,
-                          imageFormat: _format,
+                          imageFormat: _format ?? ImageFormat.JPEG,
                           maxHeight: _sizeH,
                           maxWidth: _sizeW,
                           timeMs: _timeMs,
